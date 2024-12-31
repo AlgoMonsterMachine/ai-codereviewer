@@ -74,6 +74,7 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
+      console.log("prompt:============================", prompt, "--------------------------------");
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
