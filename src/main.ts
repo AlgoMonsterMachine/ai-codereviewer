@@ -98,44 +98,28 @@ async function getFileContent(
   pull_number: number
 ): Promise<string> {
   try {
-    const response = await (octokit.rest.pulls.listFiles as any)({
+    const prResponse = await octokit.pulls.get({
       owner,
       repo,
       pull_number,
     });
 
-    interface PullFile {
-      filename: string;
-      sha: string;
-    }
-
-    const file = response.data.find((f: PullFile) => f.filename === path);
-    if (!file) {
-      throw new Error(`File ${path} not found in PR`);
-    }
-
     const contentResponse = await octokit.rest.repos.getContent({
       owner,
       repo,
       path,
-      ref: file.sha,
+      ref: prResponse.data.head.sha,
     });
 
-    if (
-      !Array.isArray(contentResponse.data) &&
-      'content' in contentResponse.data
-    ) {
-      const content = Buffer.from(
-        contentResponse.data.content,
-        "base64"
-      ).toString();
+    if (!Array.isArray(contentResponse.data) && 'content' in contentResponse.data) {
+      const content = Buffer.from(contentResponse.data.content, 'base64').toString();
       return content;
     }
 
-    throw new Error('Unexpected response format from GitHub API');
+    throw new Error(`File ${path} not found in PR`);
   } catch (error) {
     console.error(`Error fetching file content: ${error}`);
-    return "";
+    throw error;
   }
 }
 
