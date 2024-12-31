@@ -111,8 +111,14 @@ async function getFileContent(
       ref: prResponse.data.head.sha,
     });
 
-    if (!Array.isArray(contentResponse.data) && 'content' in contentResponse.data) {
-      const content = Buffer.from(contentResponse.data.content, 'base64').toString();
+    if (
+      !Array.isArray(contentResponse.data) &&
+      "content" in contentResponse.data
+    ) {
+      const content = Buffer.from(
+        contentResponse.data.content,
+        "base64"
+      ).toString();
       return content;
     }
 
@@ -219,11 +225,11 @@ function createComment(
     const isLineInChunk = chunk.changes.some((change) => {
       let changeLine: number | undefined;
 
-      if (change.type === 'add') {
+      if (change.type === "add") {
         changeLine = change.ln;
-      } else if (change.type === 'del') {
+      } else if (change.type === "del") {
         changeLine = change.ln;
-      } else if (change.type === 'normal') {
+      } else if (change.type === "normal") {
         changeLine = change.ln2 || change.ln1;
       }
 
@@ -231,7 +237,9 @@ function createComment(
     });
 
     if (!isLineInChunk) {
-      console.log(`skip line ${lineNumber} comment, it is not in the current diff range`);
+      console.log(
+        `skip line ${lineNumber} comment, it is not in the current diff range`
+      );
       return [];
     }
 
