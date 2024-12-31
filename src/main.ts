@@ -74,7 +74,11 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
-      console.log("prompt:============================", prompt, "--------------------------------");
+      console.log(
+        "prompt:============================",
+        prompt,
+        "--------------------------------"
+      );
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
@@ -117,16 +121,30 @@ async function getFileContent(
       ref: file.sha,
     });
 
-    // @ts-expect-error - content exists when file is found
-    const content = Buffer.from(contentResponse.data.content, 'base64').toString();
-    return content;
+    if (
+      !Array.isArray(contentResponse.data) &&
+      'content' in contentResponse.data
+    ) {
+      const content = Buffer.from(
+        contentResponse.data.content,
+        "base64"
+      ).toString();
+      return content;
+    }
+
+    throw new Error('Unexpected response format from GitHub API');
   } catch (error) {
     console.error(`Error fetching file content: ${error}`);
-    return '';
+    return "";
   }
 }
 
-function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails, fileContent: string): string {
+function createPrompt(
+  file: File,
+  chunk: Chunk,
+  prDetails: PRDetails,
+  fileContent: string
+): string {
   return `Your task is to review pull requests. Instructions:
 - Provide the response in following JSON format:  {"reviews": [{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}]}
 - Do not give positive comments or compliments.
