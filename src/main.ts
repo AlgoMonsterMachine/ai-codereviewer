@@ -214,10 +214,31 @@ function createComment(
     if (!file.to) {
       return [];
     }
+
+    const lineNumber = Number(aiResponse.lineNumber);
+    const isLineInChunk = chunk.changes.some((change) => {
+      let changeLine: number | undefined;
+
+      if (change.type === 'add') {
+        changeLine = change.ln;
+      } else if (change.type === 'del') {
+        changeLine = change.ln;
+      } else if (change.type === 'normal') {
+        changeLine = change.ln2 || change.ln1;
+      }
+
+      return changeLine === lineNumber;
+    });
+
+    if (!isLineInChunk) {
+      console.log(`skip line ${lineNumber} comment, it is not in the current diff range`);
+      return [];
+    }
+
     return {
       body: aiResponse.reviewComment,
       path: file.to,
-      line: Number(aiResponse.lineNumber),
+      line: lineNumber,
     };
   });
 }
