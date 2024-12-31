@@ -121,8 +121,9 @@ function getFileContent(owner, repo, path, pull_number) {
                 path,
                 ref: prResponse.data.head.sha,
             });
-            if (!Array.isArray(contentResponse.data) && 'content' in contentResponse.data) {
-                const content = Buffer.from(contentResponse.data.content, 'base64').toString();
+            if (!Array.isArray(contentResponse.data) &&
+                "content" in contentResponse.data) {
+                const content = Buffer.from(contentResponse.data.content, "base64").toString();
                 return content;
             }
             throw new Error(`File ${path} not found in PR`);
@@ -202,10 +203,28 @@ function createComment(file, chunk, aiResponses) {
         if (!file.to) {
             return [];
         }
+        const lineNumber = Number(aiResponse.lineNumber);
+        const isLineInChunk = chunk.changes.some((change) => {
+            let changeLine;
+            if (change.type === "add") {
+                changeLine = change.ln;
+            }
+            else if (change.type === "del") {
+                changeLine = change.ln;
+            }
+            else if (change.type === "normal") {
+                changeLine = change.ln2 || change.ln1;
+            }
+            return changeLine === lineNumber;
+        });
+        if (!isLineInChunk) {
+            console.log(`skip line ${lineNumber} comment, it is not in the current diff range`);
+            return [];
+        }
         return {
             body: aiResponse.reviewComment,
             path: file.to,
-            line: Number(aiResponse.lineNumber),
+            line: lineNumber,
         };
     });
 }
