@@ -64,8 +64,16 @@ async function analyzeCode(
 
   for (const file of parsedDiff) {
     if (file.to === "/dev/null") continue; // Ignore deleted files
+
+    const fileContent = await getFileContent(
+      prDetails.owner,
+      prDetails.repo,
+      file.to!,
+      prDetails.pull_number
+    );
+
     for (const chunk of file.chunks) {
-      const prompt = createPrompt(file, chunk, prDetails);
+      const prompt = createPrompt(file, chunk, prDetails, fileContent);
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
@@ -78,7 +86,46 @@ async function analyzeCode(
   return comments;
 }
 
-function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails): string {
+async function getFileContent(
+  owner: string,
+  repo: string,
+  path: string,
+  pull_number: number
+): Promise<string> {
+  try {
+    const response = await (octokit.rest.pulls.listFiles as any)({
+      owner,
+      repo,
+      pull_number,
+    });
+
+    interface PullFile {
+      filename: string;
+      sha: string;
+    }
+
+    const file = response.data.find((f: PullFile) => f.filename === path);
+    if (!file) {
+      throw new Error(`File ${path} not found in PR`);
+    }
+
+    const contentResponse = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path,
+      ref: file.sha,
+    });
+
+    // @ts-expect-error - content exists when file is found
+    const content = Buffer.from(contentResponse.data.content, 'base64').toString();
+    return content;
+  } catch (error) {
+    console.error(`Error fetching file content: ${error}`);
+    return '';
+  }
+}
+
+function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails, fileContent: string): string {
   return `Your task is to review pull requests. Instructions:
 - Provide the response in following JSON format:  {"reviews": [{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}]}
 - Do not give positive comments or compliments.
@@ -90,7 +137,7 @@ function createPrompt(file: File, chunk: Chunk, prDetails: PRDetails): string {
 Review the following code diff in the file "${
     file.to
   }" and take the pull request title and description into account when writing the response.
-  
+
 Pull request title: ${prDetails.title}
 Pull request description:
 
@@ -106,6 +153,12 @@ ${chunk.changes
   // @ts-expect-error - ln and ln2 exists where needed
   .map((c) => `${c.ln ? c.ln : c.ln2} ${c.content}`)
   .join("\n")}
+\`\`\`
+
+Complete file content:
+
+\`\`\`
+${fileContent}
 \`\`\`
 `;
 }
