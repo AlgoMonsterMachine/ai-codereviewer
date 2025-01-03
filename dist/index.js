@@ -229,8 +229,7 @@ function createComment(file, chunk, aiResponses) {
         return {
             body: aiResponse.reviewComment,
             path: file.to,
-            line: lineNumber,
-            diff_hunk: chunk.content
+            line: lineNumber
         };
     });
 }
