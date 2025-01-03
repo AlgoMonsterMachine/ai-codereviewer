@@ -239,7 +239,6 @@ function getAIResponse(prompt) {
                     },
                 ] }));
             const res = ((_b = (_a = response.choices[0].message) === null || _a === void 0 ? void 0 : _a.content) === null || _b === void 0 ? void 0 : _b.trim()) || "{}";
-            console.log("res:============================\n", res, "\n");
             return JSON.parse(res).reviews;
         }
         catch (error) {
@@ -322,12 +321,6 @@ function main() {
         });
         const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
         const prDiffInfo = yield getPRDiffInfo(prDetails.owner, prDetails.repo, prDetails.pull_number);
-        console.log("prDiffInfo:============================\n", JSON.stringify(prDiffInfo, (key, value) => {
-            if (value instanceof Set) {
-                return Array.from(value).sort((a, b) => a - b);
-            }
-            return value;
-        }, 2), "\n");
         const comments = yield analyzeCode(validFiles, prDetails, prDiffInfo);
         if (comments.length > 0) {
             yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, comments);

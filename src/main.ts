@@ -261,7 +261,7 @@ async function getAIResponse(prompt: string): Promise<Array<{
     });
 
     const res = response.choices[0].message?.content?.trim() || "{}";
-    console.log("res:============================\n", res, "\n");
+
     return JSON.parse(res).reviews;
   } catch (error) {
     console.error("getAIResponse Error:", error);
@@ -377,17 +377,6 @@ async function main() {
     prDetails.owner,
     prDetails.repo,
     prDetails.pull_number
-  );
-
-  console.log(
-    "prDiffInfo:============================\n",
-    JSON.stringify(prDiffInfo, (key, value) => {
-      if (value instanceof Set) {
-        return Array.from(value).sort((a, b) => a - b);
-      }
-      return value;
-    }, 2),
-    "\n"
   );
 
   const comments = await analyzeCode(validFiles, prDetails, prDiffInfo);
