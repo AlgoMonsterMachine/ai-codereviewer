@@ -94,14 +94,8 @@ function analyzeCode(parsedDiff, prDetails) {
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
                 const prompt = createPrompt(file, chunk, prDetails, fileContent);
-                // console.log(
-                //   "prompt:============================",
-                //   prompt,
-                //   "--------------------------------"
-                // );
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
-                    console.log("aiResponse:============================", aiResponse);
                     const newComments = createComment(file, chunk, aiResponse);
                     if (newComments) {
                         comments.push(...newComments);
@@ -186,9 +180,9 @@ function getAIResponse(prompt) {
             presence_penalty: 0,
         };
         try {
-            const response = yield openai.chat.completions.create(Object.assign(Object.assign(Object.assign({}, queryConfig), (OPENAI_API_MODEL.startsWith("gpt-")
-                ? { response_format: { type: "json_object" } }
-                : {})), { messages: [
+            const response = yield openai.chat.completions.create(Object.assign(Object.assign({}, queryConfig), { 
+                // the model should support JSON output
+                response_format: { type: "json_object" }, messages: [
                     {
                         role: "system",
                         content: prompt,
@@ -199,7 +193,7 @@ function getAIResponse(prompt) {
             return JSON.parse(res).reviews;
         }
         catch (error) {
-            console.error("Error:", error);
+            console.error("getAIResponse Error:", error);
             return null;
         }
     });
