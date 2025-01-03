@@ -95,34 +95,38 @@ function getPRDiffInfo(owner, repo, pull_number) {
         });
         // @ts-expect-error - response.data is a string
         const prDiff = (0, parse_diff_1.default)(response.data);
-        return {
-            chunks: prDiff.map(file => ({
-                fileName: file.to || "",
-                validLines: new Set(file.chunks.flatMap(chunk => chunk.changes
-                    .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
-                    .filter((ln) => ln !== undefined))),
-            })),
-        };
+        const prDiffInfo = {};
+        let i = 0;
+        for (const file of prDiff) {
+            if (!file.to)
+                throw new Error(i + " File name is undefined:\n" + JSON.stringify(prDiff));
+            prDiffInfo[file.to || ""] = new Set(file.chunks.flatMap(chunk => chunk.changes
+                .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
+                .filter((ln) => ln !== undefined)));
+            i++;
+        }
+        return prDiffInfo;
     });
 }
-function analyzeCode(parsedDiff, prDetails) {
+function analyzeCode(parsedDiff, prDetails, prDiffInfo) {
     return __awaiter(this, void 0, void 0, function* () {
         const comments = [];
-        const prDiffInfo = yield getPRDiffInfo(prDetails.owner, prDetails.repo, prDetails.pull_number);
         for (const file of parsedDiff) {
             if (file.to === "/dev/null")
                 continue;
-            const fileDiffInfo = prDiffInfo.chunks.find(chunk => chunk.fileName === file.to);
+            if (!file.to)
+                throw new Error("File name is undefined::\n" + JSON.stringify(file));
+            const fileDiffInfo = prDiffInfo[file.to];
             if (!fileDiffInfo) {
                 console.log(`No PR diff info found for file: ${file.to}`);
                 continue;
             }
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
-                const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo.validLines);
+                const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo);
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
-                    const newComments = createComment(file, fileDiffInfo.validLines, aiResponse);
+                    const newComments = createComment(file, fileDiffInfo, aiResponse);
                     if (newComments) {
                         comments.push(...newComments);
                     }
@@ -300,11 +304,11 @@ function main() {
             return !excludePatterns.some((pattern) => { var _a; return (0, minimatch_1.default)((_a = file.to) !== null && _a !== void 0 ? _a : "", pattern); });
         });
         const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
-        const comments = yield analyzeCode(validFiles, prDetails);
+        const prDiffInfo = yield getPRDiffInfo(prDetails.owner, prDetails.repo, prDetails.pull_number);
+        console.log("prDiffInfo:============================\n", prDiffInfo, "\n");
+        const comments = yield analyzeCode(validFiles, prDetails, prDiffInfo);
         if (comments.length > 0) {
-            for (const comment of comments) {
-                yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, [comment]);
-            }
+            yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, comments);
         }
     });
 }
