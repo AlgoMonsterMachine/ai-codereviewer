@@ -74,6 +74,7 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
+      console.log("prompt:============================\n", prompt, "\n");
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
@@ -201,8 +202,8 @@ async function getAIResponse(prompt: string): Promise<Array<{
       ],
     });
 
-    console.log("res:============================\n", response, "\n");
     const res = response.choices[0].message?.content?.trim() || "{}";
+    console.log("res:============================\n", res, "\n");
     return JSON.parse(res).reviews;
   } catch (error) {
     console.error("getAIResponse Error:", error);

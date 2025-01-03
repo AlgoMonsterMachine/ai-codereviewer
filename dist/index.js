@@ -94,6 +94,7 @@ function analyzeCode(parsedDiff, prDetails) {
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
                 const prompt = createPrompt(file, chunk, prDetails, fileContent);
+                console.log("prompt:============================\n", prompt, "\n");
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
                     const newComments = createComment(file, chunk, aiResponse);
@@ -193,8 +194,8 @@ function getAIResponse(prompt) {
                         content: prompt,
                     },
                 ] }));
-            console.log("res:============================\n", response, "\n");
             const res = ((_b = (_a = response.choices[0].message) === null || _a === void 0 ? void 0 : _a.content) === null || _b === void 0 ? void 0 : _b.trim()) || "{}";
+            console.log("res:============================\n", res, "\n");
             return JSON.parse(res).reviews;
         }
         catch (error) {
