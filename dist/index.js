@@ -94,9 +94,14 @@ function analyzeCode(parsedDiff, prDetails) {
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
                 const prompt = createPrompt(file, chunk, prDetails, fileContent);
-                console.log("prompt:============================", prompt, "--------------------------------");
+                // console.log(
+                //   "prompt:============================",
+                //   prompt,
+                //   "--------------------------------"
+                // );
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
+                    console.log("aiResponse:============================", aiResponse);
                     const newComments = createComment(file, chunk, aiResponse);
                     if (newComments) {
                         comments.push(...newComments);
@@ -181,7 +186,7 @@ function getAIResponse(prompt) {
             presence_penalty: 0,
         };
         try {
-            const response = yield openai.chat.completions.create(Object.assign(Object.assign(Object.assign({}, queryConfig), (OPENAI_API_MODEL === "gpt-4-1106-preview"
+            const response = yield openai.chat.completions.create(Object.assign(Object.assign(Object.assign({}, queryConfig), (OPENAI_API_MODEL.startsWith("gpt-")
                 ? { response_format: { type: "json_object" } }
                 : {})), { messages: [
                     {
@@ -189,6 +194,7 @@ function getAIResponse(prompt) {
                         content: prompt,
                     },
                 ] }));
+            console.log("res:============================\n", response, "\n");
             const res = ((_b = (_a = response.choices[0].message) === null || _a === void 0 ? void 0 : _a.content) === null || _b === void 0 ? void 0 : _b.trim()) || "{}";
             return JSON.parse(res).reviews;
         }
