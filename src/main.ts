@@ -23,6 +23,13 @@ interface PRDetails {
   description: string;
 }
 
+interface PRDiffInfo {
+  chunks: Array<{
+    fileName: string;
+    validLines: Set<number>;
+  }>;
+}
+
 async function getPRDetails(): Promise<PRDetails> {
   const { repository, number } = JSON.parse(
     readFileSync(process.env.GITHUB_EVENT_PATH || "", "utf8")
@@ -56,14 +63,58 @@ async function getDiff(
   return response.data;
 }
 
+async function getPRDiffInfo(
+  owner: string,
+  repo: string,
+  pull_number: number
+): Promise<PRDiffInfo> {
+  const response = await octokit.pulls.get({
+    owner,
+    repo,
+    pull_number,
+    mediaType: { format: "diff" },
+  });
+
+  // @ts-expect-error - response.data is a string
+  const prDiff = parseDiff(response.data);
+
+  return {
+    chunks: prDiff.map(file => ({
+      fileName: file.to || "",
+      validLines: new Set(
+        file.chunks.flatMap(chunk =>
+          chunk.changes
+            .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
+            .filter((ln): ln is number => ln !== undefined)
+        )
+      ),
+    })),
+  };
+}
+
 async function analyzeCode(
   parsedDiff: File[],
   prDetails: PRDetails
 ): Promise<Array<{ body: string; path: string; line: number }>> {
   const comments: Array<{ body: string; path: string; line: number }> = [];
 
+  const prDiffInfo = await getPRDiffInfo(
+    prDetails.owner,
+    prDetails.repo,
+    prDetails.pull_number
+  );
+
   for (const file of parsedDiff) {
-    if (file.to === "/dev/null") continue; // Ignore deleted files
+    if (file.to === "/dev/null") continue;
+
+    const fileDiffInfo = prDiffInfo.chunks.find(
+      chunk => chunk.fileName === file.to
+    );
+
+    if (!fileDiffInfo) {
+      console.log(`No PR diff info found for file: ${file.to}`);
+      continue;
+    }
 
     const fileContent = await getFileContent(
       prDetails.owner,
@@ -73,10 +124,10 @@ async function analyzeCode(
     );
 
     for (const chunk of file.chunks) {
-      const prompt = createPrompt(file, chunk, prDetails, fileContent);
+      const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo.validLines);
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
-        const newComments = createComment(file, chunk, aiResponse);
+        const newComments = createComment(file, fileDiffInfo.validLines, aiResponse);
         if (newComments) {
           comments.push(...newComments);
         }
@@ -128,14 +179,9 @@ function createPrompt(
   file: File,
   chunk: Chunk,
   prDetails: PRDetails,
-  fileContent: string
+  fileContent: string,
+  validLines: Set<number>
 ): string {
-  const chunkLineNumbers = chunk.changes.map(c =>
-    c.type === 'add' ? c.ln : c.type === 'del' ? c.ln : c.ln2
-  ).filter(ln => ln !== undefined);
-
-  const minLine = Math.min(...chunkLineNumbers);
-  const maxLine = Math.max(...chunkLineNumbers);
   return `Your task is to review pull requests. Instructions:
 - Provide the response in following JSON format:  {"reviews": [{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}]}
 - Do not give positive comments or compliments.
@@ -144,7 +190,8 @@ function createPrompt(
 - Use the given description only for the overall context and only comment the code.
 - IMPORTANT: NEVER suggest adding comments to the code.
 - ONLY review the code changes in the provided diff, not the entire file content.
-- The lineNumber MUST be within the diff range (between ${minLine} and ${maxLine}).
+- CRITICAL: You can ONLY comment on the following line numbers: ${Array.from(validLines).join(', ')}
+- If you want to reference code outside the diff, include it in your comment but set the lineNumber to a valid diff line.
 
 Review the following code diff in the file "${
     file.to
@@ -212,7 +259,7 @@ async function getAIResponse(prompt: string): Promise<Array<{
 
 function createComment(
   file: File,
-  chunk: Chunk,
+  validLines: Set<number>,
   aiResponses: Array<{
     lineNumber: string;
     reviewComment: string;
@@ -224,23 +271,10 @@ function createComment(
     }
 
     const lineNumber = Number(aiResponse.lineNumber);
-    const relevantChange = chunk.changes.find((change) => {
-      let changeLine: number | undefined;
 
-      if (change.type === "add") {
-        changeLine = change.ln;
-      } else if (change.type === "del") {
-        changeLine = change.ln;
-      } else if (change.type === "normal") {
-        changeLine = change.ln2 || change.ln1;
-      }
-
-      return changeLine === lineNumber;
-    });
-
-    if (!relevantChange) {
+    if (!validLines.has(lineNumber)) {
       console.log(
-        `skip line ${lineNumber} comment, it is not in the current diff range`
+        `Skipping comment for line ${lineNumber} as it's not in the PR diff`
       );
       return [];
     }
