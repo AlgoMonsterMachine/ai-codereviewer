@@ -83,14 +83,27 @@ async function getPRDiffInfo(
     if (!file.to) throw new Error(i + " File name is undefined:\n"+ JSON.stringify(prDiff));
 
     const changedLines = new Set<number>();
-    console.log("file:::::::::\n", JSON.stringify(file, null, 2), "\n------,,,,,,,,,");
-    prDiffInfo[file.to || ""] = new Set(
-      file.chunks.flatMap(chunk =>
-        chunk.changes
-          .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
-          .filter((ln): ln is number => ln !== undefined)
-      )
-    );
+
+    for (const chunk of file.chunks) {
+      for (const change of chunk.changes) {
+        switch (change.type) {
+          case "normal":
+            changedLines.add(change.ln2);
+            break;
+          case "add":
+            changedLines.add(change.ln);
+            break;
+          case "del":
+            // del is not a line number, so we don't need to add it to the set
+            break;
+          default:
+            console.log("file:::::::::\n", JSON.stringify(file, null, 2), "\n------,,,,,,,,,");
+            throw new Error("Unknown change type: " + (change as any).type);
+        }
+      }
+    }
+
+    prDiffInfo[file.to || ""] = changedLines;
     i++;
   }
 
