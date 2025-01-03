@@ -73,6 +73,8 @@ async function getPRDiffInfo(
     mediaType: { format: "diff" },
   });
 
+  console.log("response.data:============================\n", JSON.stringify(response.data, null, 2), "\nkkkkkkkkkkkkk");
+
   // @ts-expect-error - response.data is a string
   const prDiff = parseDiff(response.data);
 
