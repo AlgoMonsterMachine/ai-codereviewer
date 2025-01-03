@@ -93,6 +93,7 @@ function getPRDiffInfo(owner, repo, pull_number) {
             pull_number,
             mediaType: { format: "diff" },
         });
+        console.log("response.data:============================\n", JSON.stringify(response.data, null, 2), "\nkkkkkkkkkkkkk");
         // @ts-expect-error - response.data is a string
         const prDiff = (0, parse_diff_1.default)(response.data);
         const prDiffInfo = {};
