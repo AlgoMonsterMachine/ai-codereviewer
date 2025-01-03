@@ -328,12 +328,14 @@ async function main() {
 
   const comments = await analyzeCode(validFiles, prDetails);
   if (comments.length > 0) {
-    await createReviewComment(
-      prDetails.owner,
-      prDetails.repo,
-      prDetails.pull_number,
-      comments
-    );
+    for (const comment of comments) {
+      await createReviewComment(
+        prDetails.owner,
+        prDetails.repo,
+        prDetails.pull_number,
+        [comment]
+      );
+    }
   }
 }
 

@@ -290,7 +290,9 @@ function main() {
         const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
         const comments = yield analyzeCode(validFiles, prDetails);
         if (comments.length > 0) {
-            yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, comments);
+            for (const comment of comments) {
+                yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, [comment]);
+            }
         }
     });
 }
