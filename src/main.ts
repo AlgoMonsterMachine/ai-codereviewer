@@ -74,11 +74,11 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
-      console.log(
-        "prompt:============================",
-        prompt,
-        "--------------------------------"
-      );
+      // console.log(
+      //   "prompt:============================",
+      //   prompt,
+      //   "--------------------------------"
+      // );
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         console.log("aiResponse:============================", aiResponse);
@@ -190,7 +190,8 @@ async function getAIResponse(prompt: string): Promise<Array<{
     const response = await openai.chat.completions.create({
       ...queryConfig,
       // return JSON if the model supports it:
-      ...(OPENAI_API_MODEL === "gpt-4-1106-preview"
+      // ...(OPENAI_API_MODEL === "gpt-4-1106-preview"
+      ...(OPENAI_API_MODEL.startsWith("gpt-")
         ? { response_format: { type: "json_object" } }
         : {}),
       messages: [
@@ -201,8 +202,8 @@ async function getAIResponse(prompt: string): Promise<Array<{
       ],
     });
 
+    console.log("res:============================\n", response, "\n");
     const res = response.choices[0].message?.content?.trim() || "{}";
-    console.log("res:============================\n", res, "\n");
     return JSON.parse(res).reviews;
   } catch (error) {
     console.error("Error:", error);
