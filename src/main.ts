@@ -74,7 +74,6 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
-      console.log("prompt:============================\n", prompt, "\n");
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
         const newComments = createComment(file, chunk, aiResponse);
@@ -225,7 +224,7 @@ function createComment(
     }
 
     const lineNumber = Number(aiResponse.lineNumber);
-    const isLineInChunk = chunk.changes.some((change) => {
+    const relevantChange = chunk.changes.find((change) => {
       let changeLine: number | undefined;
 
       if (change.type === "add") {
@@ -239,7 +238,7 @@ function createComment(
       return changeLine === lineNumber;
     });
 
-    if (!isLineInChunk) {
+    if (!relevantChange) {
       console.log(
         `skip line ${lineNumber} comment, it is not in the current diff range`
       );
@@ -250,6 +249,7 @@ function createComment(
       body: aiResponse.reviewComment,
       path: file.to,
       line: lineNumber,
+      diff_hunk: chunk.content
     };
   });
 }

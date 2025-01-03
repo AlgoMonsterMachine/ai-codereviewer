@@ -94,7 +94,6 @@ function analyzeCode(parsedDiff, prDetails) {
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
                 const prompt = createPrompt(file, chunk, prDetails, fileContent);
-                console.log("prompt:============================\n", prompt, "\n");
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
                     const newComments = createComment(file, chunk, aiResponse);
@@ -210,7 +209,7 @@ function createComment(file, chunk, aiResponses) {
             return [];
         }
         const lineNumber = Number(aiResponse.lineNumber);
-        const isLineInChunk = chunk.changes.some((change) => {
+        const relevantChange = chunk.changes.find((change) => {
             let changeLine;
             if (change.type === "add") {
                 changeLine = change.ln;
@@ -223,7 +222,7 @@ function createComment(file, chunk, aiResponses) {
             }
             return changeLine === lineNumber;
         });
-        if (!isLineInChunk) {
+        if (!relevantChange) {
             console.log(`skip line ${lineNumber} comment, it is not in the current diff range`);
             return [];
         }
@@ -231,6 +230,7 @@ function createComment(file, chunk, aiResponses) {
             body: aiResponse.reviewComment,
             path: file.to,
             line: lineNumber,
+            diff_hunk: chunk.content
         };
     });
 }
