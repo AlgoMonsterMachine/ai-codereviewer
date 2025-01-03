@@ -141,6 +141,7 @@ function analyzeCode(parsedDiff, prDetails, prDiffInfo) {
             const fileContent = yield getFileContent(prDetails.owner, prDetails.repo, file.to, prDetails.pull_number);
             for (const chunk of file.chunks) {
                 const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo);
+                console.log("Prompt:::\n", prompt, "\n----------------===");
                 const aiResponse = yield getAIResponse(prompt);
                 if (aiResponse) {
                     const newComments = createComment(file, fileDiffInfo, aiResponse);
