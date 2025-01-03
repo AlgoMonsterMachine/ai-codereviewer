@@ -130,6 +130,12 @@ function createPrompt(
   prDetails: PRDetails,
   fileContent: string
 ): string {
+  const chunkLineNumbers = chunk.changes.map(c =>
+    c.type === 'add' ? c.ln : c.type === 'del' ? c.ln : c.ln2
+  ).filter(ln => ln !== undefined);
+
+  const minLine = Math.min(...chunkLineNumbers);
+  const maxLine = Math.max(...chunkLineNumbers);
   return `Your task is to review pull requests. Instructions:
 - Provide the response in following JSON format:  {"reviews": [{"lineNumber":  <line_number>, "reviewComment": "<review comment>"}]}
 - Do not give positive comments or compliments.
@@ -137,6 +143,8 @@ function createPrompt(
 - Write the comment in GitHub Markdown format.
 - Use the given description only for the overall context and only comment the code.
 - IMPORTANT: NEVER suggest adding comments to the code.
+- ONLY review the code changes in the provided diff, not the entire file content.
+- The lineNumber MUST be within the diff range (between ${minLine} and ${maxLine}).
 
 Review the following code diff in the file "${
     file.to
