@@ -23,12 +23,10 @@ interface PRDetails {
   description: string;
 }
 
-interface PRDiffInfo {
-  chunks: Array<{
-    fileName: string;
-    validLines: Set<number>;
-  }>;
-}
+/**
+ * key is the file name, value is the set of line numbers that are valid for comments
+ */
+type PRDiffInfo = Record<string, Set<number>>;
 
 async function getPRDetails(): Promise<PRDetails> {
   const { repository, number } = JSON.parse(
@@ -78,38 +76,36 @@ async function getPRDiffInfo(
   // @ts-expect-error - response.data is a string
   const prDiff = parseDiff(response.data);
 
-  return {
-    chunks: prDiff.map(file => ({
-      fileName: file.to || "",
-      validLines: new Set(
-        file.chunks.flatMap(chunk =>
-          chunk.changes
-            .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
-            .filter((ln): ln is number => ln !== undefined)
-        )
-      ),
-    })),
-  };
+  const prDiffInfo: PRDiffInfo = {};
+
+  let i = 0;
+  for (const file of prDiff) {
+    if (!file.to) throw new Error(i + " File name is undefined:\n"+ JSON.stringify(prDiff));
+    prDiffInfo[file.to || ""] = new Set(
+      file.chunks.flatMap(chunk =>
+        chunk.changes
+          .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
+          .filter((ln): ln is number => ln !== undefined)
+      )
+    );
+    i++;
+  }
+
+  return prDiffInfo;
 }
 
 async function analyzeCode(
   parsedDiff: File[],
-  prDetails: PRDetails
+  prDetails: PRDetails,
+  prDiffInfo: PRDiffInfo,
 ): Promise<Array<{ body: string; path: string; line: number }>> {
   const comments: Array<{ body: string; path: string; line: number }> = [];
 
-  const prDiffInfo = await getPRDiffInfo(
-    prDetails.owner,
-    prDetails.repo,
-    prDetails.pull_number
-  );
-
   for (const file of parsedDiff) {
     if (file.to === "/dev/null") continue;
+    if (!file.to) throw new Error("File name is undefined::\n"+ JSON.stringify(file));
 
-    const fileDiffInfo = prDiffInfo.chunks.find(
-      chunk => chunk.fileName === file.to
-    );
+    const fileDiffInfo = prDiffInfo[file.to];
 
     if (!fileDiffInfo) {
       console.log(`No PR diff info found for file: ${file.to}`);
@@ -124,10 +120,10 @@ async function analyzeCode(
     );
 
     for (const chunk of file.chunks) {
-      const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo.validLines);
+      const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo);
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
-        const newComments = createComment(file, fileDiffInfo.validLines, aiResponse);
+        const newComments = createComment(file, fileDiffInfo, aiResponse);
         if (newComments) {
           comments.push(...newComments);
         }
@@ -361,16 +357,22 @@ async function main() {
 
   const validFiles = filteredDiff.filter(file => isValidPath(file.to ?? ""));
 
-  const comments = await analyzeCode(validFiles, prDetails);
+  const prDiffInfo = await getPRDiffInfo(
+    prDetails.owner,
+    prDetails.repo,
+    prDetails.pull_number
+  );
+
+  console.log("prDiffInfo:============================\n", prDiffInfo, "\n");
+
+  const comments = await analyzeCode(validFiles, prDetails, prDiffInfo);
   if (comments.length > 0) {
-    for (const comment of comments) {
-      await createReviewComment(
-        prDetails.owner,
-        prDetails.repo,
-        prDetails.pull_number,
-        [comment]
-      );
-    }
+    await createReviewComment(
+      prDetails.owner,
+      prDetails.repo,
+      prDetails.pull_number,
+      comments
+    );
   }
 }
 
