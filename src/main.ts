@@ -74,14 +74,8 @@ async function analyzeCode(
 
     for (const chunk of file.chunks) {
       const prompt = createPrompt(file, chunk, prDetails, fileContent);
-      // console.log(
-      //   "prompt:============================",
-      //   prompt,
-      //   "--------------------------------"
-      // );
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
-        console.log("aiResponse:============================", aiResponse);
         const newComments = createComment(file, chunk, aiResponse);
         if (newComments) {
           comments.push(...newComments);
@@ -189,11 +183,8 @@ async function getAIResponse(prompt: string): Promise<Array<{
   try {
     const response = await openai.chat.completions.create({
       ...queryConfig,
-      // return JSON if the model supports it:
-      // ...(OPENAI_API_MODEL === "gpt-4-1106-preview"
-      ...(OPENAI_API_MODEL.startsWith("gpt-")
-        ? { response_format: { type: "json_object" } }
-        : {}),
+      // the model should support JSON output
+      response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
@@ -206,7 +197,7 @@ async function getAIResponse(prompt: string): Promise<Array<{
     const res = response.choices[0].message?.content?.trim() || "{}";
     return JSON.parse(res).reviews;
   } catch (error) {
-    console.error("Error:", error);
+    console.error("getAIResponse Error:", error);
     return null;
   }
 }
