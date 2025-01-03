@@ -241,6 +241,7 @@ function createReviewComment(owner, repo, pull_number, comments) {
             pull_number,
             comments,
             event: "COMMENT",
+            side: "RIGHT",
         });
     });
 }

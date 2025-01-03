@@ -265,6 +265,7 @@ async function createReviewComment(
     pull_number,
     comments,
     event: "COMMENT",
+    side: "RIGHT",
   });
 }
 
