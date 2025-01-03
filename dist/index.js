@@ -244,6 +244,10 @@ function createReviewComment(owner, repo, pull_number, comments) {
         });
     });
 }
+function isValidPath(path) {
+    const pathParts = path.split('/');
+    return !pathParts.some(part => part.startsWith('.'));
+}
 function main() {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
@@ -283,7 +287,8 @@ function main() {
         const filteredDiff = parsedDiff.filter((file) => {
             return !excludePatterns.some((pattern) => { var _a; return (0, minimatch_1.default)((_a = file.to) !== null && _a !== void 0 ? _a : "", pattern); });
         });
-        const comments = yield analyzeCode(filteredDiff, prDetails);
+        const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
+        const comments = yield analyzeCode(validFiles, prDetails);
         if (comments.length > 0) {
             yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, comments);
         }

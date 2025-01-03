@@ -268,6 +268,11 @@ async function createReviewComment(
   });
 }
 
+function isValidPath(path: string): boolean {
+  const pathParts = path.split('/');
+  return !pathParts.some(part => part.startsWith('.'));
+}
+
 async function main() {
   const prDetails = await getPRDetails();
   let diff: string | null;
@@ -319,7 +324,9 @@ async function main() {
     );
   });
 
-  const comments = await analyzeCode(filteredDiff, prDetails);
+  const validFiles = filteredDiff.filter(file => isValidPath(file.to ?? ""));
+
+  const comments = await analyzeCode(validFiles, prDetails);
   if (comments.length > 0) {
     await createReviewComment(
       prDetails.owner,
