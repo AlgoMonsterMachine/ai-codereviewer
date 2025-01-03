@@ -363,7 +363,7 @@ async function main() {
     prDetails.pull_number
   );
 
-  console.log("prDiffInfo:============================\n", prDiffInfo, "\n");
+  console.log("prDiffInfo:============================\n", JSON.stringify(prDiffInfo, null, 2), "\n");
 
   const comments = await analyzeCode(validFiles, prDetails, prDiffInfo);
   if (comments.length > 0) {

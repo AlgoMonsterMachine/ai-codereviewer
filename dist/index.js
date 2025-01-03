@@ -305,7 +305,7 @@ function main() {
         });
         const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
         const prDiffInfo = yield getPRDiffInfo(prDetails.owner, prDetails.repo, prDetails.pull_number);
-        console.log("prDiffInfo:============================\n", prDiffInfo, "\n");
+        console.log("prDiffInfo:============================\n", JSON.stringify(prDiffInfo, null, 2), "\n");
         const comments = yield analyzeCode(validFiles, prDetails, prDiffInfo);
         if (comments.length > 0) {
             yield createReviewComment(prDetails.owner, prDetails.repo, prDetails.pull_number, comments);
