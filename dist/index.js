@@ -93,7 +93,6 @@ function getPRDiffInfo(owner, repo, pull_number) {
             pull_number,
             mediaType: { format: "diff" },
         });
-        console.log("response.data:============================\n", JSON.stringify(response.data, null, 2), "\nkkkkkkkkkkkkk");
         // @ts-expect-error - response.data is a string
         const prDiff = (0, parse_diff_1.default)(response.data);
         const prDiffInfo = {};
@@ -101,6 +100,8 @@ function getPRDiffInfo(owner, repo, pull_number) {
         for (const file of prDiff) {
             if (!file.to)
                 throw new Error(i + " File name is undefined:\n" + JSON.stringify(prDiff));
+            const changedLines = new Set();
+            console.log("file:::::::::\n", JSON.stringify(file, null, 2), "\n------,,,,,,,,,");
             prDiffInfo[file.to || ""] = new Set(file.chunks.flatMap(chunk => chunk.changes
                 .map(c => (c.type === "add" ? c.ln : c.type === "del" ? c.ln : c.ln2))
                 .filter((ln) => ln !== undefined)));

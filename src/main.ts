@@ -73,8 +73,6 @@ async function getPRDiffInfo(
     mediaType: { format: "diff" },
   });
 
-  console.log("response.data:============================\n", JSON.stringify(response.data, null, 2), "\nkkkkkkkkkkkkk");
-
   // @ts-expect-error - response.data is a string
   const prDiff = parseDiff(response.data);
 
@@ -83,6 +81,9 @@ async function getPRDiffInfo(
   let i = 0;
   for (const file of prDiff) {
     if (!file.to) throw new Error(i + " File name is undefined:\n"+ JSON.stringify(prDiff));
+
+    const changedLines = new Set<number>();
+    console.log("file:::::::::\n", JSON.stringify(file, null, 2), "\n------,,,,,,,,,");
     prDiffInfo[file.to || ""] = new Set(
       file.chunks.flatMap(chunk =>
         chunk.changes
