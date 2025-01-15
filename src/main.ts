@@ -80,7 +80,10 @@ async function getPRDiffInfo(
 
   let i = 0;
   for (const file of prDiff) {
-    if (!file.to) throw new Error(i + " File name is undefined:\n"+ JSON.stringify(prDiff));
+    if (!file.to)
+      throw new Error(
+        i + " File name is undefined:\n" + JSON.stringify(prDiff)
+      );
 
     const changedLines = new Set<number>();
 
@@ -97,7 +100,11 @@ async function getPRDiffInfo(
             // del is not a line number, so we don't need to add it to the set
             break;
           default:
-            console.log("file:::::::::\n", JSON.stringify(file, null, 2), "\n------,,,,,,,,,");
+            console.log(
+              "file:::::::::\n",
+              JSON.stringify(file, null, 2),
+              "\n------,,,,,,,,,"
+            );
             throw new Error("Unknown change type: " + (change as any).type);
         }
       }
@@ -113,13 +120,14 @@ async function getPRDiffInfo(
 async function analyzeCode(
   parsedDiff: File[],
   prDetails: PRDetails,
-  prDiffInfo: PRDiffInfo,
+  prDiffInfo: PRDiffInfo
 ): Promise<Array<{ body: string; path: string; line: number }>> {
   const comments: Array<{ body: string; path: string; line: number }> = [];
 
   for (const file of parsedDiff) {
     if (file.to === "/dev/null") continue;
-    if (!file.to) throw new Error("File name is undefined::\n"+ JSON.stringify(file));
+    if (!file.to)
+      throw new Error("File name is undefined::\n" + JSON.stringify(file));
 
     const fileDiffInfo = prDiffInfo[file.to];
 
@@ -136,7 +144,13 @@ async function analyzeCode(
     );
 
     for (const chunk of file.chunks) {
-      const prompt = createPrompt(file, chunk, prDetails, fileContent, fileDiffInfo);
+      const prompt = createPrompt(
+        file,
+        chunk,
+        prDetails,
+        fileContent,
+        fileDiffInfo
+      );
       console.log("Prompt:::\n", prompt, "\n----------------===");
       const aiResponse = await getAIResponse(prompt);
       if (aiResponse) {
@@ -203,7 +217,9 @@ function createPrompt(
 - Use the given description only for the overall context and only comment the code.
 - IMPORTANT: NEVER suggest adding comments to the code.
 - ONLY review the code changes in the provided diff, not the entire file content.
-- CRITICAL: You can ONLY comment on the following line numbers: ${Array.from(validLines).join(', ')}
+- CRITICAL: You can ONLY comment on the following line numbers: ${Array.from(
+    validLines
+  ).join(", ")}
 - If you want to reference code outside the diff, include it in your comment but set the lineNumber to a valid diff line.
 
 Review the following code diff in the file "${
@@ -212,7 +228,11 @@ Review the following code diff in the file "${
 
 Pull request title: ${prDetails.title}
 
-${prDetails.description ? `Pull request description:\n\n---\n${prDetails.description}\n---` : ""}
+${
+  prDetails.description
+    ? `Pull request description:\n\n---\n${prDetails.description}\n---`
+    : ""
+}
 
 Please provide a review based on the diff and file content.
 
@@ -307,7 +327,7 @@ function createComment(
     return {
       body: aiResponse.reviewComment,
       path: file.to,
-      line: lineNumber
+      line: lineNumber,
     };
   });
 }
@@ -329,8 +349,8 @@ async function createReviewComment(
 }
 
 function isValidPath(path: string): boolean {
-  const pathParts = path.split('/');
-  return !pathParts.some(part => part.startsWith('.'));
+  const pathParts = path.split("/");
+  return !pathParts.some((part) => part.startsWith("."));
 }
 
 async function main() {
@@ -384,7 +404,7 @@ async function main() {
     );
   });
 
-  const validFiles = filteredDiff.filter(file => isValidPath(file.to ?? ""));
+  const validFiles = filteredDiff.filter((file) => isValidPath(file.to ?? ""));
 
   const prDiffInfo = await getPRDiffInfo(
     prDetails.owner,
