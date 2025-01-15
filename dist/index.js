@@ -190,20 +190,35 @@ function createPrompt(file, chunk, prDetails, fileContent, validLines) {
 - Use the given description only for the overall context and only comment the code.
 - IMPORTANT: NEVER suggest adding comments to the code.
 - ONLY review the code changes in the provided diff, not the entire file content.
-- CRITICAL: You can ONLY comment on the following line numbers: ${Array.from(validLines).join(', ')}
+- CRITICAL: You can ONLY comment on the following line numbers: ${Array.from(validLines).join(", ")}
 - If you want to reference code outside the diff, include it in your comment but set the lineNumber to a valid diff line.
 
 Review the following code diff in the file "${file.to}" and take the pull request title and description into account when writing the response.
 
 Pull request title: ${prDetails.title}
-Pull request description:
 
----
-${prDetails.description}
----
+${prDetails.description
+        ? `Pull request description:\n\n---\n${prDetails.description}\n---`
+        : ""}
 
-Git diff to review:
+Please provide a review based on the diff and file content.
 
+Before showing the diff, here's an explanation of the diff format:
+\`\`\`
+In a Git diff, @@ is part of a "hunk header," which indicates the starting position and range of the changes in both the old and new files.
+
+@@ -<start line>,<number of lines> +<start line>,<number of lines> @@
+
+	•	-<start line>,<number of lines>: Refers to the starting line and number of lines affected in the original file (before the changes).
+	•	+<start line>,<number of lines>: Refers to the starting line and number of lines affected in the modified file (after the changes).
+
+For the content lines:
+- Lines starting with " -" indicate deleted lines
+- Lines starting with " +" indicate added lines
+- Lines without " -" or " +" indicate unchanged lines in this commit
+\`\`\`
+
+Here's the diff for this change:
 \`\`\`diff
 ${chunk.content}
 ${chunk.changes
@@ -212,8 +227,7 @@ ${chunk.changes
         .join("\n")}
 \`\`\`
 
-Complete file content:
-
+Below is the complete content of the file after this change. Please provide a review based on the above diff and the following file content:
 \`\`\`
 ${fileContent}
 \`\`\`
@@ -261,7 +275,7 @@ function createComment(file, validLines, aiResponses) {
         return {
             body: aiResponse.reviewComment,
             path: file.to,
-            line: lineNumber
+            line: lineNumber,
         };
     });
 }
@@ -278,8 +292,8 @@ function createReviewComment(owner, repo, pull_number, comments) {
     });
 }
 function isValidPath(path) {
-    const pathParts = path.split('/');
-    return !pathParts.some(part => part.startsWith('.'));
+    const pathParts = path.split("/");
+    return !pathParts.some((part) => part.startsWith("."));
 }
 function main() {
     var _a;
@@ -320,7 +334,7 @@ function main() {
         const filteredDiff = parsedDiff.filter((file) => {
             return !excludePatterns.some((pattern) => { var _a; return (0, minimatch_1.default)((_a = file.to) !== null && _a !== void 0 ? _a : "", pattern); });
         });
-        const validFiles = filteredDiff.filter(file => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
+        const validFiles = filteredDiff.filter((file) => { var _a; return isValidPath((_a = file.to) !== null && _a !== void 0 ? _a : ""); });
         const prDiffInfo = yield getPRDiffInfo(prDetails.owner, prDetails.repo, prDetails.pull_number);
         const comments = yield analyzeCode(validFiles, prDetails, prDiffInfo);
         if (comments.length > 0) {
