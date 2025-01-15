@@ -211,14 +211,27 @@ Review the following code diff in the file "${
   }" and take the pull request title and description into account when writing the response.
 
 Pull request title: ${prDetails.title}
-Pull request description:
 
----
-${prDetails.description}
----
+${prDetails.description ? `Pull request description:\n\n---\n${prDetails.description}\n---` : ""}
 
-Git diff to review:
+Please provide a review based on the diff and file content.
 
+Before showing the diff, here's an explanation of the diff format:
+\`\`\`
+In a Git diff, @@ is part of a "hunk header," which indicates the starting position and range of the changes in both the old and new files.
+
+@@ -<start line>,<number of lines> +<start line>,<number of lines> @@
+
+	•	-<start line>,<number of lines>: Refers to the starting line and number of lines affected in the original file (before the changes).
+	•	+<start line>,<number of lines>: Refers to the starting line and number of lines affected in the modified file (after the changes).
+
+For the content lines:
+- Lines starting with " -" indicate deleted lines
+- Lines starting with " +" indicate added lines
+- Lines without " -" or " +" indicate unchanged lines in this commit
+\`\`\`
+
+Here's the diff for this change:
 \`\`\`diff
 ${chunk.content}
 ${chunk.changes
@@ -227,8 +240,7 @@ ${chunk.changes
   .join("\n")}
 \`\`\`
 
-Complete file content:
-
+Below is the complete content of the file after this change. Please provide a review based on the above diff and the following file content:
 \`\`\`
 ${fileContent}
 \`\`\`
